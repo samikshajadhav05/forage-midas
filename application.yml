@@ -1,0 +1,22 @@
+general:
+  kafka-topic: transactions
+
+spring:
+  kafka:
+    consumer:
+      # Tell the consumer to read messages from the very beginning of the topic.
+      auto-offset-reset: earliest
+      # Define the consumer group for this application.
+      group-id: group_id
+      # Specify the deserializer to use for converting JSON strings into objects.
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            # Tell the deserializer that it is safe to create objects from this package.
+            # This is a security measure.
+            trusted:
+              packages: "com.jpmc.midascore.foundation"
+    producer:
+      # Tell the producer how to convert Transaction objects into JSON text.
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
