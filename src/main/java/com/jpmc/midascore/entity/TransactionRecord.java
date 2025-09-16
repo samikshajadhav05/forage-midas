@@ -4,7 +4,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
 @Entity
@@ -12,34 +11,40 @@ public class TransactionRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
 
     @ManyToOne
-    @JoinColumn(name = "sender_id", nullable = false)
     private UserRecord sender;
 
     @ManyToOne
-    @JoinColumn(name = "recipient_id", nullable = false)
     private UserRecord recipient;
 
     private float amount;
 
-    // JPA requires a no-arg constructor
+    // 🆕 new field
+    private float incentive;
+
     public TransactionRecord() {
     }
 
-    public TransactionRecord(UserRecord sender, UserRecord recipient, float amount) {
+    // 🆕 updated constructor
+    public TransactionRecord(UserRecord sender, UserRecord recipient, float amount, float incentive) {
         this.sender = sender;
         this.recipient = recipient;
         this.amount = amount;
+        this.incentive = incentive;
     }
 
-    // Getters and Setters
-    public Long getId() {
+    // existing constructor for backward compatibility
+    public TransactionRecord(UserRecord sender, UserRecord recipient, float amount) {
+        this(sender, recipient, amount, 0.0f);
+    }
+
+    public long getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -66,5 +71,13 @@ public class TransactionRecord {
     public void setAmount(float amount) {
         this.amount = amount;
     }
-}
 
+    // 🆕 getter/setter for incentive
+    public float getIncentive() {
+        return incentive;
+    }
+
+    public void setIncentive(float incentive) {
+        this.incentive = incentive;
+    }
+}

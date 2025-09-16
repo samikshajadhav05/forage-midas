@@ -16,8 +16,8 @@ public class UserPopulator {
 
     public void populate() {
         System.out.println("--- Starting User Population ---");
-        // This is the correct file for user data for Task Three
-        String[] userLines = fileLoader.loadStrings("test_data/lkjhgfdsa.hjkl");
+        // Current file only has two columns: name, balance
+        String[] userLines = fileLoader.loadStrings("/test_data/lkjhgfdsa.hjkl");
 
         if (userLines == null || userLines.length == 0) {
             System.err.println("!!! ERROR: User data file could not be loaded or is empty.");
@@ -28,20 +28,19 @@ public class UserPopulator {
         int usersSaved = 0;
         for (String userLine : userLines) {
             if (userLine.trim().isEmpty()) {
-                continue; // Skip any blank lines
+                continue; // Skip blank lines
             }
 
             String[] userData = userLine.split(", ");
-            if (userData.length != 3) {
+            if (userData.length != 2) {
                 System.err.println("!!! SKIPPING line (wrong column count): [" + userLine + "]");
                 continue;
             }
 
             try {
-                // Correctly parse data in the format: name, balance, id
                 String name = userData[0].trim();
                 float balance = Float.parseFloat(userData[1].trim());
-                long id = Long.parseLong(userData[2].trim());
+                long id = usersSaved + 1; // ✅ Auto-assign sequential IDs starting at 1
 
                 UserRecord user = new UserRecord(id, name, balance);
                 userRepository.save(user);
@@ -53,4 +52,3 @@ public class UserPopulator {
         System.out.println("--- Finished User Population. Total users saved: " + usersSaved + " ---");
     }
 }
-

@@ -3,6 +3,7 @@ package com.jpmc.midascore.component;
 import com.jpmc.midascore.entity.TransactionRecord;
 import com.jpmc.midascore.entity.UserRecord;
 import com.jpmc.midascore.foundation.Transaction;
+import com.jpmc.midascore.foundation.Incentive;
 import com.jpmc.midascore.repository.TransactionRepository;
 import com.jpmc.midascore.repository.UserRepository;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Optional;
 
@@ -24,6 +26,9 @@ public class KafkaConsumer {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private RestTemplate restTemplate; // Inject RestTemplate bean
+
     @KafkaListener(topics = "${general.kafka-topic}")
     public void consume(Transaction transaction) {
         LOG.info("--> TRANSACTION RECEIVED - Amount: {}", transaction.getAmount());
@@ -36,19 +41,35 @@ public class KafkaConsumer {
             UserRecord recipient = recipientOptional.get();
 
             if (sender.getBalance() >= transaction.getAmount()) {
-                // Update balances
+                // Deduct amount from sender
                 sender.setBalance(sender.getBalance() - transaction.getAmount());
-                recipient.setBalance(recipient.getBalance() + transaction.getAmount());
 
-                // Save updated user records
+                // Call Incentive API
+                Incentive incentive = null;
+                try {
+                    incentive = restTemplate.postForObject(
+                            "http://localhost:8080/incentive",
+                            transaction,
+                            Incentive.class
+                    );
+                } catch (Exception e) {
+                    LOG.warn("Incentive API call failed: {}", e.getMessage());
+                }
+
+                float incentiveAmount = (incentive != null) ? incentive.getAmount() : 0f;
+
+                // Add amount + incentive to recipient
+                recipient.setBalance(recipient.getBalance() + transaction.getAmount() + incentiveAmount);
+
+                // Save updated users
                 userRepository.save(sender);
                 userRepository.save(recipient);
 
-                // Create and save transaction record
-                TransactionRecord transactionRecord = new TransactionRecord(sender, recipient, transaction.getAmount());
+                // Save transaction with incentive
+                TransactionRecord transactionRecord = new TransactionRecord(sender, recipient, transaction.getAmount(), incentiveAmount);
                 transactionRepository.save(transactionRecord);
 
-                LOG.info("Transaction processed successfully.");
+                LOG.info("Transaction processed successfully. Incentive added: {}", incentiveAmount);
             } else {
                 LOG.warn("Transaction discarded: Insufficient balance.");
             }

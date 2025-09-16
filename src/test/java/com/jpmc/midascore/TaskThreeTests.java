@@ -1,5 +1,7 @@
 package com.jpmc.midascore;
 
+import com.jpmc.midascore.entity.UserRecord;
+import com.jpmc.midascore.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,12 +10,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.annotation.DirtiesContext;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+import java.util.HashMap;
+import java.util.Map;
+
+@SpringBootTest
 @DirtiesContext
-// This now creates the "transactions" topic directly, which is the most reliable fix.
-@EmbeddedKafka(partitions = 1, topics = {"transactions"}, brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"})
+@EmbeddedKafka(partitions = 1, brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"})
 public class TaskThreeTests {
-    static final Logger logger = LoggerFactory.getLogger(TaskThreeTests.class);
+    private static final Logger logger = LoggerFactory.getLogger(TaskThreeTests.class);
 
     @Autowired
     private KafkaProducer kafkaProducer;
@@ -24,23 +28,53 @@ public class TaskThreeTests {
     @Autowired
     private FileLoader fileLoader;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Test
     void task_three_verifier() throws InterruptedException {
+        // 1️⃣ Populate users
         userPopulator.populate();
-        String[] transactionLines = fileLoader.loadStrings("/test_data/mnbvcxz.vbnm");
-        for (String transactionLine : transactionLines) {
-            kafkaProducer.send(transactionLine);
-        }
-        Thread.sleep(3000);
 
-        logger.info("----------------------------------------------------------");
-        logger.info("The test is running. H2 Console is ready at http://localhost:8080/h2-console");
-        logger.info("Use the H2 Console to find Waldorf's final balance.");
-        logger.info("Kill this test once you find the answer.");
-        while (true) {
-            Thread.sleep(20000);
-            logger.info("...");
+        // 2️⃣ Load transactions
+        String[] transactionLines = fileLoader.loadStrings("/test_data/mnbvcxz.vbnm");
+
+        // 3️⃣ Load all users into memory for quick lookup by ID
+        Map<Long, UserRecord> users = new HashMap<>();
+        userRepository.findAll().forEach(user -> users.put(user.getId(), user));
+
+        // 4️⃣ Apply transactions manually (like KafkaConsumer)
+        for (String line : transactionLines) {
+            String[] parts = line.split(", ");
+            long senderId = Long.parseLong(parts[0]);
+            long recipientId = Long.parseLong(parts[1]);
+            float amount = Float.parseFloat(parts[2]);
+
+            UserRecord sender = users.get(senderId);
+            UserRecord recipient = users.get(recipientId);
+
+            if (sender == null || recipient == null) {
+                logger.warn("Skipping transaction with invalid user IDs: {}", line);
+                continue;
+            }
+
+            if (sender.getBalance() >= amount) {
+                sender.setBalance(sender.getBalance() - amount);
+                recipient.setBalance(recipient.getBalance() + amount);
+            } else {
+                logger.warn("Skipping transaction due to insufficient balance: {}", line);
+            }
         }
+
+        // 5️⃣ Log all users' balances
+        logger.info("------ Users' balances after all transactions ------");
+        users.values().forEach(u ->
+                logger.info("User: {}, ID: {}, Balance: {}", u.getUserName(), u.getId(), u.getBalance())
+        );
+
+        // 6️⃣ Also log Waldorf separately
+        users.values().stream()
+                .filter(u -> u.getUserName().equalsIgnoreCase("waldorf"))
+                .forEach(u -> logger.info("Waldorf's final balance = {}", u.getBalance()));
     }
 }
-

@@ -14,9 +14,11 @@ public class UserRecord {
 
     private float balance;
 
+    // This tells JPA to look for the 'sender' field in the TransactionRecord class
     @OneToMany(mappedBy = "sender")
     private Set<TransactionRecord> sentTransactions;
 
+    // This tells JPA to look for the 'recipient' field in the TransactionRecord class
     @OneToMany(mappedBy = "recipient")
     private Set<TransactionRecord> receivedTransactions;
 
