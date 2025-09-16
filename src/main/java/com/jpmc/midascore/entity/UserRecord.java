@@ -1,39 +1,49 @@
 package com.jpmc.midascore.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import java.util.Set;
 
 @Entity
 public class UserRecord {
-
     @Id
-    @GeneratedValue()
     private long id;
 
-    @Column(nullable = false)
-    private String name;
+    private String userName;
 
-    @Column(nullable = false)
     private float balance;
 
-    protected UserRecord() {
+    @OneToMany(mappedBy = "sender")
+    private Set<TransactionRecord> sentTransactions;
+
+    @OneToMany(mappedBy = "recipient")
+    private Set<TransactionRecord> receivedTransactions;
+
+
+    public UserRecord() {
     }
 
-    public UserRecord(String name, float balance) {
-        this.name = name;
+    public UserRecord(long id, String userName, float balance) {
+        this.id = id;
+        this.userName = userName;
         this.balance = balance;
     }
 
-    @Override
-    public String toString() {
-        return String.format("User[id=%d, name='%s', balance='%f'", id, name, balance);
-    }
-
-    public Long getId() {
+    public long getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public float getBalance() {

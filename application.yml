@@ -1,22 +1,34 @@
+spring:
+  application:
+    name: midas-core
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ''
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  kafka:
+    consumer:
+      group-id: group_id
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.jpmc.midascore.foundation
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 general:
   kafka-topic: transactions
 
-spring:
-  kafka:
-    consumer:
-      # Tell the consumer to read messages from the very beginning of the topic.
-      auto-offset-reset: earliest
-      # Define the consumer group for this application.
-      group-id: group_id
-      # Specify the deserializer to use for converting JSON strings into objects.
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring:
-          json:
-            # Tell the deserializer that it is safe to create objects from this package.
-            # This is a security measure.
-            trusted:
-              packages: "com.jpmc.midascore.foundation"
-    producer:
-      # Tell the producer how to convert Transaction objects into JSON text.
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
